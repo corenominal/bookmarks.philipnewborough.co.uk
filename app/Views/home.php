@@ -1,19 +1,54 @@
 <?= $this->extend('templates/default') ?>
 
 <?= $this->section('content') ?>
-<div class="container">
-    <div class="row">
-        <div class="col-12">
-            
-            <div class="border-bottom border-1 mb-4 pb-2 mt-4">
-                <h1 class="mb-0">Home Page</h1>
+<section class="bookmarks-page container py-3">
+    <div class="row g-4 justify-content-center">
+        <div class="col-12 col-xl-9">
+
+            <div class="bookmarks-page__header">
+                <div class="bookmarks-page__title-row">
+                    <h1 class="bookmarks-page__title mb-0">Bookmarks</h1>
+                    <form class="bookmarks-page__search" method="get" action="/" role="search" aria-label="Search bookmarks">
+                        <label for="bookmarks-search" class="visually-hidden">Search bookmarks</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                            <input
+                                type="search"
+                                id="bookmarks-search"
+                                name="q"
+                                class="form-control"
+                                placeholder="Search bookmarks"
+                                value="<?= esc($searchQuery) ?>"
+                                autocomplete="off"
+                            >
+                        </div>
+                    </form>
+                </div>
             </div>
 
-            <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Repellendus deleniti, nostrum asperiores perspiciatis aliquid ullam voluptate ipsam? Facilis alias harum officia reiciendis sequi culpa ipsam ipsum possimus corporis atque? Esse. Lorem ipsum dolor sit amet consectetur, adipisicing elit. Explicabo nemo assumenda doloremque. Voluptatem animi quas culpa repellat officiis quis ea! Aut repellat nisi et. Nam veritatis explicabo quisquam temporibus sequi!</p>
+            <section class="bookmarks" aria-label="Bookmarks list">
+                <div
+                    class="bookmarks__items"
+                    id="bookmarks-items"
+                    data-load-url="/bookmarks/load"
+                    data-offset="<?= count($bookmarks) ?>"
+                    data-limit="<?= (int) $bookmarkBatchSize ?>"
+                    data-has-more="<?= $hasMoreBookmarks ? '1' : '0' ?>"
+                    data-search="<?= esc($searchQuery) ?>"
+                >
+                    <?= view('home/partials/bookmark_items', [
+                        'bookmarks' => $bookmarks,
+                    ]) ?>
+                </div>
 
-            <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Sapiente asperiores debitis libero eius recusandae odio saepe repudiandae repellendus. Magnam tempore praesentium recusandae ad dolores nobis repellat minima dicta esse pariatur.</p>
+                <div id="bookmarks-loader" class="bookmarks__loader" aria-live="polite">
+                    <span class="bookmarks__loader-text">Scroll to load more bookmarks</span>
+                </div>
+
+                <div id="bookmarks-observer" class="bookmarks__observer" aria-hidden="true"></div>
+            </section>
 
         </div> <!-- /.col-12 -->
     </div> <!-- /.row -->
-</div> <!-- /.container -->
+</section>
 <?= $this->endSection() ?>

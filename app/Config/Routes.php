@@ -6,6 +6,8 @@ use CodeIgniter\Router\RouteCollection;
  * @var RouteCollection $routes
  */
 $routes->get('/', 'Home::index');
+$routes->get('/bookmarks/load', 'Home::loadMoreBookmarks');
+$routes->get('/bookmark/(:segment)', 'Home::show/$1');
 
 // Admin routes
 $routes->get('/admin', 'Admin\Home::index');
