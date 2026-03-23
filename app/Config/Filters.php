@@ -29,6 +29,7 @@ class Filters extends BaseFilters
         '/',
         'bookmarks/load',
         'bookmark/*',
+        'feed/rss',
         'metrics/receive',
         'cli/*',
         'api/*',

@@ -32,6 +32,9 @@ $routes->cli('cli/test/count', 'CLI\Test::count');
 // Metrics route
 $routes->post('/metrics/receive', 'Metrics::receive');
 
+// Feed routes
+$routes->get('/feed/rss', 'Feed::rss');
+
 // Logout route
 $routes->get('/logout', 'Auth::logout');
 
