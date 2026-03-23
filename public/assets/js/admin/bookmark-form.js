@@ -149,6 +149,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let screenshotDebounceTimer  = null;
     let lastScreenshotRequestUrl = null;
     let lastYoutubeId            = '';
+    let capturedScreenshotFile   = '';
 
     function extractYoutubeVideoId(url) {
         let m = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
@@ -175,6 +176,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updatePreviewImage(url) {
+        // If a screenshot was manually captured via the button, always show it.
+        if (capturedScreenshotFile) {
+            previewImage.src = '/media/' + capturedScreenshotFile;
+            previewImage.alt = '';
+            previewImage.onerror = function () { previewImageWrap.classList.add('d-none'); };
+            previewImageWrap.classList.remove('d-none');
+            return;
+        }
+
         // In edit mode, if the bookmark already has a saved image, keep showing it.
         if (action === 'edit' && form.dataset.image) {
             showOriginalImage();
@@ -374,6 +384,72 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (_) {}
     }
 
+    // ── Screenshot button ──────────────────────────────────────────────────────
+    const btnScreenshot        = document.getElementById('btn-screenshot');
+    const btnScreenshotSpinner = document.getElementById('btn-screenshot-spinner');
+    const btnScreenshotIcon    = document.getElementById('btn-screenshot-icon');
+    const screenshotStatus     = document.getElementById('screenshot-status');
+
+    function updateScreenshotButtonState() {
+        const url = document.getElementById('field-url').value.trim();
+        let valid = false;
+        try { new URL(url); valid = true; } catch (_) {}
+        btnScreenshot.disabled = !valid;
+    }
+
+    document.getElementById('field-url').addEventListener('input', updateScreenshotButtonState);
+    updateScreenshotButtonState();
+
+    btnScreenshot.addEventListener('click', function () {
+        const url = document.getElementById('field-url').value.trim();
+        let valid = false;
+        try { new URL(url); valid = true; } catch (_) {}
+        if (!valid) return;
+
+        btnScreenshot.disabled = true;
+        btnScreenshotSpinner.classList.remove('d-none');
+        btnScreenshotIcon.classList.add('d-none');
+        screenshotStatus.textContent = '';
+        screenshotStatus.classList.add('d-none');
+
+        fetch('/api/screenshot/capture', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
+            body:    JSON.stringify({ url }),
+        })
+        .then(function (res) {
+            return res.json().then(function (data) { return { status: res.status, data }; });
+        })
+        .then(function ({ status, data }) {
+            btnScreenshotSpinner.classList.add('d-none');
+            btnScreenshotIcon.classList.remove('d-none');
+            updateScreenshotButtonState();
+
+            if (status === 200 && data.filename) {
+                capturedScreenshotFile = data.filename;
+                previewImage.src = '/media/' + data.filename;
+                previewImage.alt = '';
+                previewImage.onerror = function () { previewImageWrap.classList.add('d-none'); };
+                previewImageWrap.classList.remove('d-none');
+                screenshotStatus.textContent = 'Screenshot captured.';
+                screenshotStatus.className = 'small text-success';
+                screenshotStatus.classList.remove('d-none');
+            } else {
+                screenshotStatus.textContent = data.message || 'Screenshot capture failed.';
+                screenshotStatus.className = 'small text-danger';
+                screenshotStatus.classList.remove('d-none');
+            }
+        })
+        .catch(function () {
+            btnScreenshotSpinner.classList.add('d-none');
+            btnScreenshotIcon.classList.remove('d-none');
+            updateScreenshotButtonState();
+            screenshotStatus.textContent = 'A network error occurred.';
+            screenshotStatus.className = 'small text-danger';
+            screenshotStatus.classList.remove('d-none');
+        });
+    });
+
     // ── Alert helpers ──────────────────────────────────────────────────────────
     function showAlert(type, message) {
         alertBox.className    = 'alert alert-' + type + ' mb-4';
@@ -449,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch(apiUrl, {
             method:  apiMethod,
             headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
-            body:    JSON.stringify({ title, url, tags, notes, private: isPrivate, dashboard: isDashboard }),
+            body:    JSON.stringify({ title, url, tags, notes, private: isPrivate, dashboard: isDashboard, image_file: capturedScreenshotFile }),
         })
         .then(function (res) {
             return res.json().then(function (data) { return { status: res.status, data }; });

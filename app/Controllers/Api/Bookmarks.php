@@ -50,10 +50,12 @@ class Bookmarks extends BaseController
         $tagsNormalized = $this->normalizeTags($tags);
         $uuid           = Uuid::uuid4()->toString();
 
-        $image         = '';
+        $imageFile = trim($json['image_file'] ?? '');
+        $image     = preg_match('/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\.jpg$/i', $imageFile) ? $imageFile : '';
+
         $youtubeVideoId = $this->extractYoutubeVideoId($url);
 
-        if (! empty($youtubeVideoId)) {
+        if (empty($image) && ! empty($youtubeVideoId)) {
             $image = $this->downloadYoutubeThumbnail($youtubeVideoId, $uuid);
         }
 
@@ -149,7 +151,10 @@ class Bookmarks extends BaseController
         $urlChanged     = ($url !== $bookmark['url']);
         $youtubeVideoId = $this->extractYoutubeVideoId($url);
 
-        if (! empty($youtubeVideoId) && (empty($existingImage) || $urlChanged)) {
+        $imageFile = trim($json['image_file'] ?? '');
+        if (preg_match('/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\.jpg$/i', $imageFile)) {
+            $existingImage = $imageFile;
+        } elseif (! empty($youtubeVideoId) && (empty($existingImage) || $urlChanged)) {
             $newImage = $this->downloadYoutubeThumbnail($youtubeVideoId, $uuid);
             if ($newImage !== '') {
                 $existingImage = $newImage;

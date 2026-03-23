@@ -72,6 +72,13 @@
                                 required
                             >
                             <div class="invalid-feedback" id="error-url"></div>
+                            <div class="mt-2 d-flex align-items-center gap-2">
+                                <button type="button" id="btn-screenshot" class="btn btn-sm btn-outline-secondary" disabled>
+                                    <span id="btn-screenshot-spinner" class="spinner-border spinner-border-sm me-1 d-none" role="status" aria-hidden="true"></span>
+                                    <i id="btn-screenshot-icon" class="bi bi-camera me-1"></i> Take Screenshot
+                                </button>
+                                <span id="screenshot-status" class="small d-none"></span>
+                            </div>
                         </div>
 
                         <!-- Tags -->

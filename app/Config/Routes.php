@@ -23,6 +23,7 @@ $routes->match(['post', 'options'], '/api/bookmarks', 'Api\Bookmarks::create');
 $routes->match(['put', 'options'], '/api/bookmarks/(:segment)', 'Api\Bookmarks::update/$1');
 $routes->match(['post', 'options'], '/api/markdown/preview', 'Api\MarkdownPreview::convert');
 $routes->match(['get', 'options'], '/api/screenshot/preview', 'Api\ScreenshotPreview::url');
+$routes->match(['post', 'options'], '/api/screenshot/capture', 'Api\ScreenshotPreview::capture');
 
 // Command line routes
 $routes->cli('cli/test/index/(:segment)', 'CLI\Test::index/$1');
