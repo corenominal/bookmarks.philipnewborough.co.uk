@@ -17,6 +17,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return div.innerHTML;
     }
 
+    function decodeHtmlEntities(str) {
+        const div = document.createElement('div');
+        div.innerHTML = String(str || '');
+        return div.textContent || div.innerText || '';
+    }
+
     // ── Selection state ────────────────────────────────────────────────────────
     const selectedIds = new Set();
 
@@ -103,7 +109,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     const favicon = row.favicon
                         ? `<img src="${escHtml(row.favicon)}" width="16" height="16" class="bookmark-favicon me-2" loading="lazy" onerror="this.style.display='none'">`
                         : '<i class="bi bi-bookmark me-2 text-muted"></i>';
-                    return favicon + escHtml(data);
+                    // Some titles may contain HTML-encoded entities (e.g. from imports).
+                    // Decode entities first, then escape for safe insertion.
+                    return favicon + escHtml(decodeHtmlEntities(data));
                 },
             },
             {
