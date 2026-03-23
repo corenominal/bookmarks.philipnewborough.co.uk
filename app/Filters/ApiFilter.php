@@ -67,6 +67,7 @@ class ApiFilter implements FilterInterface
         $config = config('ApiKeys');
         if ($config->masterKey == $apikey) {
             $success = true;
+            $GLOBALS['is_admin'] = true;
         }
 
         if(!$success){
