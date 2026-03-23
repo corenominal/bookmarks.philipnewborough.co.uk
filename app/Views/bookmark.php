@@ -13,6 +13,10 @@
 
                 <?php if (! empty($bookmark['image'])): ?>
                     <div class="bookmarks__image-wrap">
+                        <?php if (! empty($bookmark['url'])): ?>
+                            <a href="<?= esc($bookmark['url']) ?>" target="_blank" rel="noopener noreferrer">
+                        <?php endif; ?>
+
                         <img
                             class="bookmarks__image"
                             src="/media/<?= esc($bookmark['image']) ?>"
@@ -20,6 +24,10 @@
                             loading="lazy"
                             decoding="async"
                         >
+
+                        <?php if (! empty($bookmark['url'])): ?>
+                            </a>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
 
