@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 type:       'num',
                 orderable:  true,
                 searchable: false,
+                visible:    false,
                 width:      '3rem',
                 className:  'text-end',
             },

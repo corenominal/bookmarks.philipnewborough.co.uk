@@ -9,6 +9,9 @@
             <h2 class="mb-1">Dashboard</h2>
             <p class="text-muted mb-0 small">Overview and bookmark management</p>
         </div>
+        <a href="/admin/bookmark/create" class="btn btn-sm btn-primary flex-shrink-0">
+            <i class="bi bi-plus-circle-fill me-1"></i> Add Bookmark
+        </a>
     </div>
 
     <!-- Stats cards -->
@@ -104,7 +107,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body p-0 pb-2">
                     <div class="table-responsive">
                         <table id="bookmarks-table" class="table table-hover table-striped table-bordered align-middle mb-0" style="width:100%">
                             <thead>

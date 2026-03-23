@@ -1,0 +1,44 @@
+.bookmark-form__notes {
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.875rem;
+    resize: vertical;
+}
+
+/* ── Preview panel ──────────────────────────────────────────────────────────── */
+
+.bookmark-preview-panel {
+    position: sticky;
+    top: 1rem;
+}
+
+.bookmark-preview-panel__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0.75rem;
+}
+
+.bookmark-preview-panel__placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    border: 1px dashed var(--bs-border-color);
+    border-radius: 1rem;
+    color: var(--bs-secondary-color);
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.bookmark-preview-panel__placeholder .bi-bookmark {
+    font-size: 2rem;
+    opacity: 0.4;
+}
+
+/* The preview card should not have grid hover behaviour */
+.bookmark-preview-panel__card {
+    cursor: default;
+}

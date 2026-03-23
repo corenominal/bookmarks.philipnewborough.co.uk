@@ -13,9 +13,15 @@ $routes->get('/bookmark/(:segment)', 'Home::show/$1');
 $routes->get('/admin', 'Admin\Home::index');
 $routes->get('/admin/datatable', 'Admin\Home::datatable');
 $routes->post('/admin/delete', 'Admin\Home::delete');
+$routes->get('/admin/bookmark/create', 'Admin\Bookmarks::create');
+$routes->get('/admin/bookmark/(:segment)/edit', 'Admin\Bookmarks::edit/$1');
 
 // API routes
 $routes->match(['get', 'options'], '/api/test/ping', 'Api\Test::ping');
+$routes->match(['get', 'options'], '/api/tags', 'Api\Tags::index');
+$routes->match(['post', 'options'], '/api/bookmarks', 'Api\Bookmarks::create');
+$routes->match(['put', 'options'], '/api/bookmarks/(:segment)', 'Api\Bookmarks::update/$1');
+$routes->match(['post', 'options'], '/api/markdown/preview', 'Api\MarkdownPreview::convert');
 
 // Command line routes
 $routes->cli('cli/test/index/(:segment)', 'CLI\Test::index/$1');
