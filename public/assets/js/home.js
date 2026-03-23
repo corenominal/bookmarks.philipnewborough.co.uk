@@ -4,6 +4,23 @@ document.addEventListener('DOMContentLoaded', () => {
 	const loader          = document.querySelector('#bookmarks-loader');
 	const searchInput     = document.querySelector('#bookmarks-search');
 
+	const initImageShimmer = (root = document) => {
+		root.querySelectorAll('.bookmarks__image:not([data-shimmer-init])').forEach((img) => {
+			img.dataset.shimmerInit = '1';
+			const wrap = img.closest('.bookmarks__image-wrap');
+			if (!wrap) return;
+			const markLoaded = () => wrap.classList.add('bookmarks__image-wrap--loaded');
+			if (img.complete && img.naturalWidth > 0) {
+				markLoaded();
+			} else {
+				img.addEventListener('load', markLoaded, { once: true });
+				img.addEventListener('error', markLoaded, { once: true });
+			}
+		});
+	};
+
+	initImageShimmer();
+
 	if (searchInput) {
 		document.addEventListener('keydown', (event) => {
 			const isFindShortcut = (event.metaKey || event.ctrlKey)
@@ -71,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 				if (typeof payload.html === 'string' && payload.html.trim() !== '') {
 					bookmarksItems.insertAdjacentHTML('beforeend', payload.html);
+					initImageShimmer(bookmarksItems);
 				}
 
 				state.offset  = Number(payload.nextOffset || state.offset);

@@ -3,6 +3,11 @@
     --bookmarks-text-muted: #adb5bd;
 }
 
+@keyframes bookmarks-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
 .bookmarks-page__header {
     margin-bottom: 1.5rem;
 }
@@ -59,8 +64,15 @@
     width: 100%;
     aspect-ratio: 16 / 9;
     overflow: hidden;
-    background: #1c2128;
+    background: linear-gradient(90deg, #1c2128 25%, #2a3140 50%, #1c2128 75%);
+    background-size: 200% 100%;
+    animation: bookmarks-shimmer 1.5s ease-in-out infinite;
     flex-shrink: 0;
+}
+
+.bookmarks__image-wrap--loaded {
+    animation: none;
+    background: #1c2128;
 }
 
 .bookmarks__image {
@@ -68,6 +80,12 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    opacity: 0;
+    transition: opacity 400ms ease;
+}
+
+.bookmarks__image-wrap--loaded .bookmarks__image {
+    opacity: 1;
 }
 
 .bookmarks__body {
