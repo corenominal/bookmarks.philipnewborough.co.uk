@@ -1,14 +1,21 @@
-document.addEventListener("DOMContentLoaded", function() {
-    const sidebarLinks = document.querySelectorAll("#sidebar .nav-link");
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarLinks = document.querySelectorAll('#sidebar .nav-link');
     sidebarLinks.forEach(link => {
-        if (link.getAttribute("href") === "/admin") {
-            link.classList.remove("text-white-50");
-            link.classList.add("active");
+        if (link.getAttribute('href') === '/admin') {
+            link.classList.remove('text-white-50');
+            link.classList.add('active');
         }
     });
 });
 
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener('DOMContentLoaded', function() {
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    function escHtml(str) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(String(str || '')));
+        return div.innerHTML;
+    }
 
     // ── Selection state ────────────────────────────────────────────────────────
     const selectedIds = new Set();
@@ -17,46 +24,46 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById('btn-delete').disabled = selectedIds.size === 0;
     }
 
-    // ── Status filter state ────────────────────────────────────────────────────
-    let statusFilter = '';
+    // ── Pending delete IDs (bulk or single-row) ────────────────────────────────
+    let pendingDeleteIds = [];
 
-    const exampleTable = new DataTable('#example-table', {
+    // ── Visibility filter state ────────────────────────────────────────────────
+    let visibilityFilter = '';
+
+    const bookmarksTable = new DataTable('#bookmarks-table', {
 
         // ── Layout & UI ────────────────────────────────────────────────────────
-        autoWidth:      true,           // Auto-calculate column widths
-        info:           true,           // Show "Showing X to Y of Z entries"
-        lengthChange:   true,           // Allow user to change page length
-        ordering:       true,           // Enable column sorting
-        paging:         true,           // Enable pagination
-        searching:      true,           // Enable global search box
-        orderMulti:     true,           // Allow multi-column sort (shift+click)
-        orderClasses:   true,           // Add sorting CSS classes to columns
-        pagingType:     'simple_numbers', // 'simple' | 'simple_numbers' | 'full' | 'full_numbers' | 'first_last_numbers'
-        pageLength:     10,             // Rows per page
-        lengthMenu:     [10, 25, 50, 100], // Page length options
+        autoWidth:      true,
+        info:           true,
+        lengthChange:   true,
+        ordering:       true,
+        paging:         true,
+        searching:      true,
+        orderMulti:     false,
+        orderClasses:   true,
+        pagingType:     'simple_numbers',
+        pageLength:     25,
+        lengthMenu:     [10, 25, 50, 100],
 
-        // ── Default sort ───────────────────────────────────────────────────────
-        order: [[1, 'asc']],            // [[columnIndex, 'asc'|'desc'], ...]
+        // ── Default sort: newest first ─────────────────────────────────────────
+        order: [[6, 'desc']],
 
         // ── Performance ────────────────────────────────────────────────────────
-        deferRender:    false,          // Defer rendering off-screen rows (useful for large datasets)
-        processing:     true,           // Show a processing indicator (useful with serverSide)
-        serverSide:     true,           // Enable server-side processing (requires ajax option)
-        stateSave:      false,          // Persist state (paging, sorting, search) in sessionStorage
+        deferRender:    false,
+        processing:     true,
+        serverSide:     true,
+        stateSave:      false,
 
         // ── Data source ────────────────────────────────────────────────────────
         ajax: {
             url: '/admin/datatable',
             data: function(d) {
-                d.status_filter = statusFilter;
+                d.visibility_filter = visibilityFilter;
             },
         },
-        // data: [],                    // Inline JS data array (alternative to HTML or ajax)
 
         // ── Scroll ─────────────────────────────────────────────────────────────
-        scrollX:        false,          // Horizontal scrolling
-        scrollY:        '',             // Vertical scroll height, e.g. '400px'
-        scrollCollapse: false,          // Shrink table when fewer rows than scrollY height
+        scrollX: false,
 
         // ── Column definitions ─────────────────────────────────────────────────
         columns: [
@@ -72,102 +79,119 @@ document.addEventListener("DOMContentLoaded", function() {
                 defaultContent: '<input type="checkbox" class="row-select form-check-input" aria-label="Select row">',
             },
             {
-                // Column 1 — #
-                name:        'id',
-                data:        'id',
-                title:       '#',
-                type:        'num',         // 'string' | 'num' | 'num-fmt' | 'html' | 'html-num' | 'date'
-                orderable:   true,
-                searchable:  false,         // No value in searching the row number
-                visible:     true,
-                width:       '3rem',
-                className:   'text-end',
+                // Column 1 — ID
+                name:       'id',
+                data:       'id',
+                title:      '#',
+                type:       'num',
+                orderable:  true,
+                searchable: false,
+                width:      '3rem',
+                className:  'text-end',
             },
             {
-                // Column 1 — First Name
-                name:        'first_name',
-                data:        'first_name',
-                title:       'First Name',
-                type:        'string',
-                orderable:   true,
-                searchable:  true,
-                visible:     true,
-                width:       '',            // Leave empty to let autoWidth decide
-                className:   '',
+                // Column 2 — Title (with favicon)
+                name:       'title',
+                data:       'title',
+                title:      'Title',
+                type:       'string',
+                orderable:  true,
+                searchable: true,
+                render: function(data, type, row) {
+                    if (type !== 'display') return data || '';
+                    const favicon = row.favicon
+                        ? `<img src="${escHtml(row.favicon)}" width="16" height="16" class="bookmark-favicon me-2" loading="lazy" onerror="this.style.display='none'">`
+                        : '<i class="bi bi-bookmark me-2 text-muted"></i>';
+                    return favicon + escHtml(data);
+                },
             },
             {
-                // Column 2 — Last Name
-                name:        'last_name',
-                data:        'last_name',
-                title:       'Last Name',
-                type:        'string',
-                orderable:   true,
-                searchable:  true,
-                visible:     true,
-                width:       '',
-                className:   '',
+                // Column 3 — URL
+                name:       'url',
+                data:       'url',
+                title:      'URL',
+                type:       'string',
+                orderable:  false,
+                searchable: true,
+                width:      '220px',
+                render: function(data, type) {
+                    if (type !== 'display' || !data) return data || '';
+                    const display = data.length > 45 ? data.substring(0, 45) + '\u2026' : data;
+                    return `<a href="${escHtml(data)}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">${escHtml(display)}</a>`;
+                },
             },
             {
-                // Column 3 — Email
-                name:        'email',
-                data:        'email',
-                title:       'Email',
-                type:        'string',
-                orderable:   true,
-                searchable:  true,
-                visible:     true,
-                width:       '',
-                className:   '',
+                // Column 4 — Tags
+                name:       'tags',
+                data:       'tags',
+                title:      'Tags',
+                type:       'string',
+                orderable:  false,
+                searchable: true,
+                render: function(data, type) {
+                    if (type !== 'display' || !data) return data || '';
+                    return data.split(',')
+                        .map(t => t.trim())
+                        .filter(Boolean)
+                        .map(t => `<span class="badge text-bg-secondary me-1 mb-1">${escHtml(t)}</span>`)
+                        .join('');
+                },
             },
             {
-                // Column 4 — Role
-                name:        'role',
-                data:        'role',
-                title:       'Role',
-                type:        'string',
-                orderable:   true,
-                searchable:  true,
-                visible:     true,
-                width:       '',
-                className:   '',
+                // Column 5 — Visibility (server returns badge HTML)
+                name:       'private',
+                data:       'private',
+                title:      'Visibility',
+                type:       'string',
+                orderable:  true,
+                searchable: false,
+                width:      '6.5rem',
+                className:  'text-center',
             },
             {
-                // Column 5 — Status (server returns badge HTML; sorting/searching handled server-side on the raw value)
-                name:        'status',
-                data:        'status',
-                title:       'Status',
-                type:        'string',
-                orderable:   true,
-                searchable:  true,
-                visible:     true,
-                width:       '6rem',
-                className:   'text-center',
+                // Column 6 — Created
+                name:       'created_at',
+                data:       'created_at',
+                title:      'Created',
+                type:       'date',
+                orderable:  true,
+                searchable: false,
+                width:      '7.5rem',
+                render: function(data, type) {
+                    if (type !== 'display' || !data) return data || '';
+                    return new Date(data).toLocaleDateString('en-GB', {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                    });
+                },
             },
             {
-                // Column 6 — Joined (ISO date string sorts correctly as a string)
-                name:        'joined',
-                data:        'joined',
-                title:       'Joined',
-                type:        'date',
-                orderable:   true,
-                searchable:  false,
-                visible:     true,
-                width:       '7rem',
-                className:   '',
+                // Column 7 — Actions
+                data:       null,
+                title:      '',
+                orderable:  false,
+                searchable: false,
+                width:      '80px',
+                className:  'text-end',
+                render: function(data, type, row) {
+                    return `<div class="btn-group btn-group-sm" role="group">` +
+                        `<a href="/admin/bookmark/${escHtml(row.uuid)}/edit" class="btn btn-outline-primary" title="Edit bookmark"><i class="bi bi-pencil-fill"></i></a>` +
+                        `<button type="button" class="btn btn-outline-danger btn-row-delete" data-id="${row.id}" title="Delete bookmark"><i class="bi bi-trash3-fill"></i></button>` +
+                        `</div>`;
+                },
             },
         ],
 
         // ── Language / localisation ────────────────────────────────────────────
         language: {
-            emptyTable:     'No data available in table',
-            info:           'Showing _START_ to _END_ of _TOTAL_ entries',
-            infoEmpty:      'Showing 0 to 0 of 0 entries',
-            infoFiltered:   '(filtered from _MAX_ total entries)',
+            emptyTable:     'No bookmarks found',
+            info:           'Showing _START_ to _END_ of _TOTAL_ bookmarks',
+            infoEmpty:      'Showing 0 to 0 of 0 bookmarks',
+            infoFiltered:   '(filtered from _MAX_ total bookmarks)',
             lengthMenu:     'Show _MENU_ entries',
-            loadingRecords: 'Loading...',
-            processing:     'Processing...',
+            loadingRecords: 'Loading\u2026',
+            processing:     'Processing\u2026',
             search:         'Search:',
-            zeroRecords:    'No matching records found',
+            zeroRecords:    'No matching bookmarks found',
             paginate: {
                 first:    'First',
                 last:     'Last',
@@ -177,10 +201,9 @@ document.addEventListener("DOMContentLoaded", function() {
         },
 
         // ── Callbacks ──────────────────────────────────────────────────────────
-        // initComplete: function(settings, json) {},   // Fires once table is fully initialised
         drawCallback: function() {
-            // Restore checkbox state and row highlight for every visible row after each draw
-            exampleTable.rows({ page: 'current' }).every(function() {
+            // Restore checkbox state and row highlight after each draw
+            bookmarksTable.rows({ page: 'current' }).every(function() {
                 const id       = this.data().id;
                 const checkbox = this.node().querySelector('.row-select');
                 const selected = selectedIds.has(id);
@@ -191,23 +214,20 @@ document.addEventListener("DOMContentLoaded", function() {
             const selectAll = document.getElementById('select-all-checkbox');
             if (selectAll) {
                 const visibleIds = [];
-                exampleTable.rows({ page: 'current' }).every(function() { visibleIds.push(this.data().id); });
+                bookmarksTable.rows({ page: 'current' }).every(function() { visibleIds.push(this.data().id); });
                 const n = visibleIds.filter(id => selectedIds.has(id)).length;
                 selectAll.checked       = n > 0 && n === visibleIds.length;
                 selectAll.indeterminate = n > 0 && n <  visibleIds.length;
             }
             updateDeleteButton();
         },
-        // rowCallback:  function(row, data, index) {}, // Fires for each row on every draw
-        // createdRow:   function(row, data, index) {}, // Fires once per row when the TR element is created
-        // headerCallback: function(thead, data, start, end, display) {},
 
     });
 
     // ── Row checkbox clicks ────────────────────────────────────────────────────
-    document.querySelector('#example-table tbody').addEventListener('change', function(e) {
+    document.querySelector('#bookmarks-table tbody').addEventListener('change', function(e) {
         if (!e.target.classList.contains('row-select')) return;
-        const row = exampleTable.row(e.target.closest('tr'));
+        const row = bookmarksTable.row(e.target.closest('tr'));
         const id  = row.data().id;
         const tr  = e.target.closest('tr');
         if (e.target.checked) {
@@ -217,11 +237,10 @@ document.addEventListener("DOMContentLoaded", function() {
             selectedIds.delete(id);
             tr.classList.remove('table-active');
         }
-        // Sync the select-all header checkbox
         const selectAll = document.getElementById('select-all-checkbox');
         if (selectAll) {
             const visibleIds = [];
-            exampleTable.rows({ page: 'current' }).every(function() { visibleIds.push(this.data().id); });
+            bookmarksTable.rows({ page: 'current' }).every(function() { visibleIds.push(this.data().id); });
             const n = visibleIds.filter(id => selectedIds.has(id)).length;
             selectAll.checked       = n > 0 && n === visibleIds.length;
             selectAll.indeterminate = n > 0 && n <  visibleIds.length;
@@ -230,9 +249,9 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     // ── Select-all checkbox (current page) ────────────────────────────────────
-    document.querySelector('#example-table thead').addEventListener('change', function(e) {
+    document.querySelector('#bookmarks-table thead').addEventListener('change', function(e) {
         if (e.target.id !== 'select-all-checkbox') return;
-        exampleTable.rows({ page: 'current' }).every(function() {
+        bookmarksTable.rows({ page: 'current' }).every(function() {
             const id       = this.data().id;
             const checkbox = this.node().querySelector('.row-select');
             if (e.target.checked) {
@@ -248,49 +267,35 @@ document.addEventListener("DOMContentLoaded", function() {
         updateDeleteButton();
     });
 
-    // ── Status filter dropdown ──────────────────────────────────────────────────
-    document.querySelectorAll('.status-filter-item').forEach(function(item) {
+    // ── Visibility filter dropdown ─────────────────────────────────────────────
+    document.querySelectorAll('.visibility-filter-item').forEach(function(item) {
         item.addEventListener('click', function(e) {
             e.preventDefault();
             const value = this.dataset.value;
-            // Update active state on dropdown items
-            document.querySelectorAll('.status-filter-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.visibility-filter-item').forEach(i => i.classList.remove('active'));
             this.classList.add('active');
-            // Update button label
-            const label = value || 'All';
-            document.getElementById('btn-status-filter').innerHTML =
-                '<i class="bi bi-funnel-fill"></i><span class="d-none d-lg-inline"> Status: ' + label + '</span>';
-            // Send filter as a custom AJAX param; server applies an exact WHERE clause
-            statusFilter = value;
-            exampleTable.ajax.reload(null, false);
+            const label = value ? (value.charAt(0).toUpperCase() + value.slice(1)) : 'All';
+            document.getElementById('btn-visibility-filter').innerHTML =
+                '<i class="bi bi-funnel-fill"></i><span class="d-none d-lg-inline"> Visibility: ' + label + '</span>';
+            visibilityFilter = value;
+            bookmarksTable.ajax.reload(null, false);
         });
     });
 
     // ── Refresh button ─────────────────────────────────────────────────────────
     document.getElementById('btn-datatable-refresh').addEventListener('click', function() {
-        exampleTable.ajax.reload(null, false); // null keeps current page; false = don't reset paging
-        console.log('Table refreshed');
+        bookmarksTable.ajax.reload(null, false);
     });
 
-    // ── Delete button → show confirmation modal ────────────────────────────────
+    // ── Delete modal setup ─────────────────────────────────────────────────────
     const deleteModalEl = document.getElementById('modal-delete-confirm');
-    // Disable Bootstrap's built-in FocusTrap (focus: false) so we can manage
-    // focus ourselves. Without this, the trap fights focus-move attempts made
-    // during the hide.bs.modal event and snaps focus back inside the modal —
-    // causing the "Blocked aria-hidden on a focused element" warning.
     const deleteModal   = new bootstrap.Modal(deleteModalEl, { focus: false });
 
-    // When the modal finishes opening, focus the close button manually
-    // (replaces the behaviour normally provided by Bootstrap's FocusTrap).
     deleteModalEl.addEventListener('shown.bs.modal', function() {
         const closeBtn = deleteModalEl.querySelector('.btn-close');
         if (closeBtn) closeBtn.focus();
     });
 
-    // Move focus outside the modal before Bootstrap sets aria-hidden.
-    // Because FocusTrap is disabled, nothing fights this move, so focus is
-    // guaranteed to be outside the modal when aria-hidden="true" is applied
-    // after the fade animation completes.
     deleteModalEl.addEventListener('hide.bs.modal', function() {
         const focused = deleteModalEl.querySelector(':focus');
         if (focused) focused.blur();
@@ -298,26 +303,36 @@ document.addEventListener("DOMContentLoaded", function() {
         if (btn && !btn.disabled) btn.focus();
     });
 
+    // ── Bulk delete button ─────────────────────────────────────────────────────
     document.getElementById('btn-delete').addEventListener('click', function() {
-        document.getElementById('delete-modal-count').textContent = selectedIds.size;
+        pendingDeleteIds = Array.from(selectedIds);
+        document.getElementById('delete-modal-count').textContent = pendingDeleteIds.length;
+        deleteModal.show();
+    });
+
+    // ── Single-row delete button ───────────────────────────────────────────────
+    document.querySelector('#bookmarks-table tbody').addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-row-delete');
+        if (!btn) return;
+        pendingDeleteIds = [parseInt(btn.dataset.id, 10)];
+        document.getElementById('delete-modal-count').textContent = '1';
         deleteModal.show();
     });
 
     // ── Confirm delete ─────────────────────────────────────────────────────────
     document.getElementById('btn-delete-confirm').addEventListener('click', function() {
-        const ids = Array.from(selectedIds);
-
         fetch('/admin/delete', {
-            method: 'POST',
+            method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids }),
+            body:    JSON.stringify({ ids: pendingDeleteIds }),
         })
         .then(res => res.json())
         .then(() => {
             deleteModal.hide();
-            selectedIds.clear();
+            pendingDeleteIds.forEach(id => selectedIds.delete(id));
+            pendingDeleteIds = [];
             updateDeleteButton();
-            exampleTable.ajax.reload(null, false);
+            bookmarksTable.ajax.reload(null, false);
         })
         .catch(err => console.error('Delete failed:', err));
     });

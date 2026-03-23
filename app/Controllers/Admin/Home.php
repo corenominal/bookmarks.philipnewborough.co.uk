@@ -3,65 +3,65 @@
 namespace App\Controllers\Admin;
 
 use Hermawan\DataTables\DataTable;
-use App\Models\ExampleModel;
+use App\Models\BookmarkModel;
 
 class Home extends BaseController
 {
     /**
      * Display the Admin Dashboard page.
      *
-     * Prepares view data for the dashboard, including:
-     * - Datatables feature flag
-     * - JavaScript asset list
-     * - CSS asset list
-     * - Page title
-     *
      * @return string Rendered admin dashboard view output.
      */
     public function index()
     {
-        // Datatables flag
+        $viewRow = (new BookmarkModel())->selectSum('hitcounter', 'total')->first();
+
+        $data['stats'] = [
+            'total'   => (new BookmarkModel())->countAllResults(),
+            'public'  => (new BookmarkModel())->where('private', 0)->countAllResults(),
+            'private' => (new BookmarkModel())->where('private', 1)->countAllResults(),
+            'views'   => isset($viewRow['total']) ? (int) $viewRow['total'] : 0,
+        ];
+
         $data['datatables'] = true;
-        // Array of javascript files to include
-        $data['js'] = ['admin/home'];
-        // Array of CSS files to include
-        $data['css'] = ['admin/home'];
-        // Set the page title
-        $data['title'] = 'Admin Dashboard';    
+        $data['js']         = ['admin/home'];
+        $data['css']        = ['admin/home'];
+        $data['title']      = 'Admin Dashboard';
+
         return view('admin/home', $data);
     }
 
     /**
-     * Server-side DataTables endpoint for the example table.
+     * Server-side DataTables endpoint for the bookmarks table.
      *
      * @return \CodeIgniter\HTTP\ResponseInterface JSON response for DataTables.
      */
     public function datatable()
     {
-        $model   = new ExampleModel();
-        $builder = $model->builder()->where('deleted_at IS NULL');
+        $model   = new BookmarkModel();
+        $builder = $model->builder()
+            ->select('id, uuid, title, favicon, url, tags, private, created_at')
+            ->where('deleted_at IS NULL');
 
-        $statusFilter = $this->request->getGet('status_filter');
-        if (!empty($statusFilter)) {
-            $builder->where('status', $statusFilter);
+        $visibilityFilter = $this->request->getGet('visibility_filter');
+        if ($visibilityFilter === 'public') {
+            $builder->where('private', 0);
+        } elseif ($visibilityFilter === 'private') {
+            $builder->where('private', 1);
         }
 
-        $statusMap = [
-            'Active'   => 'success',
-            'Inactive' => 'warning',
-            'Banned'   => 'danger',
-        ];
-
         return DataTable::of($builder)
-            ->edit('status', function($row) use ($statusMap) {
-                $colour = $statusMap[$row->status] ?? 'secondary';
-                return '<span class="badge text-bg-' . $colour . '">' . esc($row->status) . '</span>';
+            ->edit('private', function ($row) {
+                return $row->private
+                    ? '<span class="badge text-bg-warning">Private</span>'
+                    : '<span class="badge text-bg-success">Public</span>';
             })
+            ->escape('private', false)
             ->toJson(true);
     }
 
     /**
-     * Delete selected records (soft delete).
+     * Delete selected bookmarks (soft delete).
      *
      * @return \CodeIgniter\HTTP\ResponseInterface
      */
@@ -80,7 +80,7 @@ class Home extends BaseController
             ]);
         }
 
-        $model = new ExampleModel();
+        $model = new BookmarkModel();
         $model->whereIn('id', $ids)->delete();
 
         return $this->response->setJSON([

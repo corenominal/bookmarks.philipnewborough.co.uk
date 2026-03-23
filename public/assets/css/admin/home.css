@@ -1,0 +1,72 @@
+/* ── Stat cards ───────────────────────────────────────────────────────────── */
+
+.stat-card {
+    border: 1px solid var(--bs-border-color) !important;
+    border-left-width: 4px !important;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.stat-card--bookmarks { border-left-color: var(--bs-primary) !important; }
+.stat-card--public    { border-left-color: var(--bs-success) !important; }
+.stat-card--private   { border-left-color: var(--bs-warning) !important; }
+.stat-card--views     { border-left-color: var(--bs-info)    !important; }
+
+.stat-card__icon {
+    width: 3.25rem;
+    height: 3.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.625rem;
+    flex-shrink: 0;
+}
+
+.stat-card__icon .bi {
+    font-size: 1.375rem;
+}
+
+.stat-card__value {
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.3rem;
+}
+
+.stat-card__label {
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* ── Bookmarks table ──────────────────────────────────────────────────────── */
+
+#bookmarks-table thead th {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    background-color: var(--bs-tertiary-bg);
+    border-bottom: 2px solid var(--bs-border-color);
+}
+
+.bookmark-favicon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    vertical-align: middle;
+    opacity: 0.85;
+    flex-shrink: 0;
+}
+
+/* Ensure action buttons don't wrap */
+#bookmarks-table .btn-group {
+    white-space: nowrap;
+}
