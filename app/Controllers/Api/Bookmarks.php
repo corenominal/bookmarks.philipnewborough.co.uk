@@ -36,6 +36,15 @@ class Bookmarks extends BaseController
         $private   = (int) ($json['private'] ?? 0);
         $dashboard = (int) ($json['dashboard'] ?? 0);
 
+        $bookmarkModel = new BookmarkModel();
+
+        if ($bookmarkModel->where('url', $url)->first()) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status' => 'error',
+                'errors' => ['url' => 'A bookmark with this URL already exists.'],
+            ]);
+        }
+
         $favicon        = $this->getFavicon($url);
         $notesHtml      = $this->convertMarkdown($notes);
         $tagsNormalized = $this->normalizeTags($tags);
@@ -52,7 +61,6 @@ class Bookmarks extends BaseController
             $image = $this->captureScreenshot($url, $uuid);
         }
 
-        $bookmarkModel = new BookmarkModel();
         $bookmarkId    = $bookmarkModel->insert([
             'uuid'       => $uuid,
             'title'      => $title,
