@@ -37,9 +37,16 @@ class Bookmarks extends BaseController
         $tagsNormalized = $this->normalizeTags($tags);
         $uuid           = Uuid::uuid4()->toString();
 
-        $image = $this->hasInspirationTag($tagsNormalized)
-            ? $this->captureScreenshot($url, $uuid)
-            : '';
+        $image         = '';
+        $youtubeVideoId = $this->extractYoutubeVideoId($url);
+
+        if (! empty($youtubeVideoId)) {
+            $image = $this->downloadYoutubeThumbnail($youtubeVideoId, $uuid);
+        }
+
+        if (empty($image) && $this->hasInspirationTag($tagsNormalized)) {
+            $image = $this->captureScreenshot($url, $uuid);
+        }
 
         $bookmarkModel = new BookmarkModel();
         $bookmarkId    = $bookmarkModel->insert([
@@ -121,10 +128,17 @@ class Bookmarks extends BaseController
         $notesHtml      = $this->convertMarkdown($notes);
         $tagsNormalized = $this->normalizeTags($tags);
 
-        // Capture a screenshot when the "inspiration" tag is present and no image exists yet,
-        // or when the URL has changed (re-capture with the new URL).
-        $existingImage = $bookmark['image'] ?? '';
-        if ($this->hasInspirationTag($tagsNormalized) && (empty($existingImage) || $url !== $bookmark['url'])) {
+        // Download a YouTube thumbnail or capture a screenshot when appropriate.
+        $existingImage  = $bookmark['image'] ?? '';
+        $urlChanged     = ($url !== $bookmark['url']);
+        $youtubeVideoId = $this->extractYoutubeVideoId($url);
+
+        if (! empty($youtubeVideoId) && (empty($existingImage) || $urlChanged)) {
+            $newImage = $this->downloadYoutubeThumbnail($youtubeVideoId, $uuid);
+            if ($newImage !== '') {
+                $existingImage = $newImage;
+            }
+        } elseif ($this->hasInspirationTag($tagsNormalized) && (empty($existingImage) || $urlChanged)) {
             $newImage = $this->captureScreenshot($url, $uuid);
             if ($newImage !== '') {
                 $existingImage = $newImage;
@@ -244,6 +258,63 @@ class Bookmarks extends BaseController
                 'slug'        => $slug,
             ]);
         }
+    }
+
+    /**
+     * Extract the YouTube video ID from a URL, or return an empty string.
+     */
+    private function extractYoutubeVideoId(string $url): string
+    {
+        if (empty($url)) {
+            return '';
+        }
+
+        if (preg_match('/youtu\.be\/([a-zA-Z0-9_-]{11})/', $url, $matches)) {
+            return $matches[1];
+        }
+
+        if (preg_match('/youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/)([a-zA-Z0-9_-]{11})/', $url, $matches)) {
+            return $matches[1];
+        }
+
+        return '';
+    }
+
+    /**
+     * Download the best available YouTube thumbnail for the given video ID,
+     * save it to public/media/{uuid}.jpg, and return the filename.
+     * Returns an empty string on any failure.
+     */
+    private function downloadYoutubeThumbnail(string $videoId, string $uuid): string
+    {
+        $qualities = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault', 'default'];
+
+        foreach ($qualities as $quality) {
+            $thumbnailUrl = "https://img.youtube.com/vi/{$videoId}/{$quality}.jpg";
+            $imageData    = @file_get_contents($thumbnailUrl);
+
+            if ($imageData === false) {
+                continue;
+            }
+
+            // Skip the 120×90 placeholder returned when a quality level doesn't exist.
+            $size = @getimagesizefromstring($imageData);
+
+            if ($size === false || ($size[0] === 120 && $size[1] === 90)) {
+                continue;
+            }
+
+            $filename = $uuid . '.jpg';
+            $destPath = FCPATH . 'media' . DIRECTORY_SEPARATOR . $filename;
+
+            if (file_put_contents($destPath, $imageData) === false) {
+                return '';
+            }
+
+            return $filename;
+        }
+
+        return '';
     }
 
     /**
