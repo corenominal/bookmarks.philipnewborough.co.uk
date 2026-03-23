@@ -6,6 +6,6 @@ use CodeIgniter\Config\BaseConfig;
 
 class ScreenshotOne extends BaseConfig
 {
-    public $accesskey = '';
+    public $apikey    = '';
     public $secretkey = '';
 }
