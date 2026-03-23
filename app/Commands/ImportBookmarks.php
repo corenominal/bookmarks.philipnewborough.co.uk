@@ -104,10 +104,42 @@ class ImportBookmarks extends BaseCommand
                 continue;
             }
 
-            // Download image if present
-            $imageFilename = '';
+            // Download image — prefer YouTube thumbnail for YouTube URLs
+            $imageFilename  = '';
+            $youtubeVideoId = $this->extractYoutubeVideoId($bookmark['url'] ?? '');
 
-            if (!empty($bookmark['image'])) {
+            if (!empty($youtubeVideoId)) {
+                $thumbnailQualities = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault', 'default'];
+
+                foreach ($thumbnailQualities as $quality) {
+                    $thumbnailUrl = "https://img.youtube.com/vi/{$youtubeVideoId}/{$quality}.jpg";
+                    $imageData    = @file_get_contents($thumbnailUrl);
+
+                    if ($imageData === false) {
+                        continue;
+                    }
+
+                    // Skip the 120×90 placeholder returned when a quality level doesn't exist
+                    $size = @getimagesizefromstring($imageData);
+
+                    if ($size === false || ($size[0] === 120 && $size[1] === 90)) {
+                        continue;
+                    }
+
+                    $imageFilename = $uuid . '.jpg';
+                    $destPath      = $mediaPath . $imageFilename;
+                    file_put_contents($destPath, $imageData);
+                    CLI::write("  [IMG]  Downloaded YouTube thumbnail ({$quality}): {$imageFilename}", 'cyan');
+                    break;
+                }
+
+                if (empty($imageFilename)) {
+                    CLI::write("  [WARN] Could not download YouTube thumbnail for: {$youtubeVideoId}", 'yellow');
+                }
+            }
+
+            // Fall back to the bookmark's own image field if no thumbnail was downloaded
+            if (empty($imageFilename) && !empty($bookmark['image'])) {
                 $imageUrl = $bookmark['image'];
                 $urlPath  = parse_url($imageUrl, PHP_URL_PATH);
                 $ext      = $urlPath ? strtolower(pathinfo($urlPath, PATHINFO_EXTENSION)) : '';
@@ -185,6 +217,25 @@ class ImportBookmarks extends BaseCommand
         CLI::write('  Imported : ' . $imported, 'green');
         CLI::write('  Skipped  : ' . $skipped, 'yellow');
         CLI::write('  Errors   : ' . $errors, 'red');
+    }
+
+    private function extractYoutubeVideoId(string $url): string
+    {
+        if (empty($url)) {
+            return '';
+        }
+
+        // youtu.be short URLs
+        if (preg_match('/youtu\.be\/([a-zA-Z0-9_-]{11})/', $url, $matches)) {
+            return $matches[1];
+        }
+
+        // youtube.com/watch?v=, /embed/, /v/ URLs
+        if (preg_match('/youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/)([a-zA-Z0-9_-]{11})/', $url, $matches)) {
+            return $matches[1];
+        }
+
+        return '';
     }
 
     private function truncate(): void
