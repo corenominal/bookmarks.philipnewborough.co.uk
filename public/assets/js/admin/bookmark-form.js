@@ -175,6 +175,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updatePreviewImage(url) {
+        // In edit mode, if the bookmark already has a saved image, keep showing it.
+        if (action === 'edit' && form.dataset.image) {
+            showOriginalImage();
+            return;
+        }
+
         const videoId = extractYoutubeVideoId(url);
 
         if (videoId) {
