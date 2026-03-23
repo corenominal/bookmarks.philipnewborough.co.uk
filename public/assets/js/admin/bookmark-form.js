@@ -142,10 +142,96 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ── Live preview update ────────────────────────────────────────────────────
-    let faviconDebounceTimer = null;
-    let lastFaviconHost      = '';
-    let notesDebounceTimer   = null;
-    let lastNotesSent        = null;
+    let faviconDebounceTimer     = null;
+    let lastFaviconHost          = '';
+    let notesDebounceTimer       = null;
+    let lastNotesSent            = null;
+    let screenshotDebounceTimer  = null;
+    let lastScreenshotRequestUrl = null;
+    let lastYoutubeId            = '';
+
+    function extractYoutubeVideoId(url) {
+        let m = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+        if (m) return m[1];
+        m = url.match(/youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/)([a-zA-Z0-9_-]{11})/);
+        return m ? m[1] : '';
+    }
+
+    function hasInspirationTag() {
+        return currentTags.some(function (t) { return t.toLowerCase() === 'inspiration'; });
+    }
+
+    function showOriginalImage() {
+        const existingImage = form.dataset.image || '';
+        if (existingImage) {
+            previewImage.src = '/media/' + existingImage;
+            previewImage.alt = '';
+            previewImage.onerror = null;
+            previewImageWrap.classList.remove('d-none');
+        } else {
+            previewImageWrap.classList.add('d-none');
+            previewImage.src = '';
+        }
+    }
+
+    function updatePreviewImage(url) {
+        const videoId = extractYoutubeVideoId(url);
+
+        if (videoId) {
+            if (videoId !== lastYoutubeId) {
+                lastYoutubeId = videoId;
+                clearTimeout(screenshotDebounceTimer);
+                lastScreenshotRequestUrl = null;
+                const thumbUrl = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
+                previewImage.src = thumbUrl;
+                previewImage.alt = '';
+                previewImage.onerror = function () { previewImageWrap.classList.add('d-none'); };
+                previewImageWrap.classList.remove('d-none');
+            }
+            return;
+        }
+
+        // URL is no longer YouTube — reset YouTube state.
+        if (lastYoutubeId !== '') {
+            lastYoutubeId = '';
+            previewImage.onerror = null;
+        }
+
+        if (!hasInspirationTag() || !url) {
+            clearTimeout(screenshotDebounceTimer);
+            lastScreenshotRequestUrl = null;
+            showOriginalImage();
+            return;
+        }
+
+        // Has inspiration tag and a URL — fetch screenshot if URL changed.
+        if (url === lastScreenshotRequestUrl) {
+            return;
+        }
+
+        clearTimeout(screenshotDebounceTimer);
+        screenshotDebounceTimer = setTimeout(function () {
+            lastScreenshotRequestUrl = url;
+            fetch('/api/screenshot/preview?url=' + encodeURIComponent(url), {
+                method:  'GET',
+                headers: { 'apikey': apiKey },
+            })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data.url) {
+                    previewImage.src = data.url;
+                    previewImage.alt = '';
+                    previewImage.onerror = function () { previewImageWrap.classList.add('d-none'); };
+                    previewImageWrap.classList.remove('d-none');
+                } else {
+                    showOriginalImage();
+                }
+            })
+            .catch(function () {
+                showOriginalImage();
+            });
+        }, 1200);
+    }
 
     function fetchNotesHtml(markdown) {
         if (markdown === '') {
@@ -188,7 +274,12 @@ document.addEventListener('DOMContentLoaded', function () {
         previewCard.classList.toggle('d-none', !hasMinimum);
         previewPlaceholder.classList.toggle('d-none', hasMinimum);
 
-        if (!hasMinimum) return;
+        if (!hasMinimum) {
+            clearTimeout(screenshotDebounceTimer);
+            lastYoutubeId = '';
+            lastScreenshotRequestUrl = null;
+            return;
+        }
 
         // Title + URL
         previewTitle.textContent = title || 'Untitled';
@@ -240,6 +331,9 @@ document.addEventListener('DOMContentLoaded', function () {
             previewFavicon.classList.add('d-none');
             lastFaviconHost = '';
         }
+
+        // Image (YouTube thumbnail or ScreenshotOne for inspiration tag)
+        updatePreviewImage(url);
     }
 
     // ── Attach live preview listeners ──────────────────────────────────────────
@@ -257,16 +351,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (initialNotes) {
             lastNotesSent = initialNotes;
             fetchNotesHtml(initialNotes);
-        }
-    }
-
-    // Pre-populate image on edit
-    if (action === 'edit') {
-        const existingImage = form.dataset.image || '';
-        if (existingImage) {
-            previewImage.src = '/media/' + existingImage;
-            previewImage.alt = document.getElementById('field-title').value.trim();
-            previewImageWrap.classList.remove('d-none');
         }
     }
 
