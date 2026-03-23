@@ -37,7 +37,15 @@ class Home extends BaseController
         if (! session()->get('is_admin') && ! empty($bookmark['private'])) {
             throw new \CodeIgniter\Exceptions\PageNotFoundException('Bookmark not found.');
         }
+        
+        // Increment hit counter for non-admin views
+        if (! session()->get('is_admin')) {
+            $bookmarkModel->set('hitcounter', 'hitcounter + 1', false)
+                ->where('id', $bookmark['id'])
+                ->update();
 
+            $bookmark['hitcounter'] = (int) ($bookmark['hitcounter'] ?? 0) + 1;
+        }
         $referer  = (string) $this->request->getHeaderLine('Referer');
         $homeUrl  = site_url('/');
 
