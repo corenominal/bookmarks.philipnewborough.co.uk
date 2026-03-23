@@ -32,10 +32,14 @@ class Bookmarks extends BaseController
         $private   = (int) ($json['private'] ?? 0);
         $dashboard = (int) ($json['dashboard'] ?? 0);
 
-        $favicon       = $this->getFavicon($url);
-        $notesHtml     = $this->convertMarkdown($notes);
+        $favicon        = $this->getFavicon($url);
+        $notesHtml      = $this->convertMarkdown($notes);
         $tagsNormalized = $this->normalizeTags($tags);
-        $uuid          = Uuid::uuid4()->toString();
+        $uuid           = Uuid::uuid4()->toString();
+
+        $image = $this->hasInspirationTag($tagsNormalized)
+            ? $this->captureScreenshot($url, $uuid)
+            : '';
 
         $bookmarkModel = new BookmarkModel();
         $bookmarkId    = $bookmarkModel->insert([
@@ -47,6 +51,7 @@ class Bookmarks extends BaseController
             'notes'      => $notes,
             'notes_html' => $notesHtml,
             'tags'       => $tagsNormalized,
+            'image'      => $image,
             'private'    => $private,
             'dashboard'  => $dashboard,
             'hitcounter' => 0,
@@ -116,6 +121,16 @@ class Bookmarks extends BaseController
         $notesHtml      = $this->convertMarkdown($notes);
         $tagsNormalized = $this->normalizeTags($tags);
 
+        // Capture a screenshot when the "inspiration" tag is present and no image exists yet,
+        // or when the URL has changed (re-capture with the new URL).
+        $existingImage = $bookmark['image'] ?? '';
+        if ($this->hasInspirationTag($tagsNormalized) && (empty($existingImage) || $url !== $bookmark['url'])) {
+            $newImage = $this->captureScreenshot($url, $uuid);
+            if ($newImage !== '') {
+                $existingImage = $newImage;
+            }
+        }
+
         $bookmarkModel->where('uuid', $uuid)->set([
             'title'      => $title,
             'title_html' => esc($title),
@@ -124,6 +139,7 @@ class Bookmarks extends BaseController
             'notes'      => $notes,
             'notes_html' => $notesHtml,
             'tags'       => $tagsNormalized,
+            'image'      => $existingImage,
             'private'    => $private,
             'dashboard'  => $dashboard,
         ])->update();
@@ -228,5 +244,74 @@ class Bookmarks extends BaseController
                 'slug'        => $slug,
             ]);
         }
+    }
+
+    /**
+     * Return true when the normalised tag string contains the "inspiration" tag.
+     */
+    private function hasInspirationTag(string $tagsNormalized): bool
+    {
+        $tags = array_map('trim', explode(',', strtolower($tagsNormalized)));
+
+        return in_array('inspiration', $tags, true);
+    }
+
+    /**
+     * Capture a 1280×720 screenshot via the ScreenshotOne API, save it to
+     * public/media/{uuid}.jpg, and return the filename.
+     * Returns an empty string on any failure.
+     */
+    private function captureScreenshot(string $url, string $uuid): string
+    {
+        $config = config('ScreenshotOne');
+
+        if (empty($config->apikey)) {
+            return '';
+        }
+
+        $params = [
+            'access_key'      => $config->apikey,
+            'url'             => $url,
+            'viewport_width'  => '1280',
+            'viewport_height' => '720',
+            'block_ads'       => 'true',
+            'dark_mode'       => 'true',
+            'format'          => 'jpg',
+        ];
+
+        if (! empty($config->secretkey)) {
+            ksort($params);
+            $queryString = http_build_query($params);
+            $signature   = hash_hmac('sha256', $queryString, $config->secretkey);
+            $apiUrl      = 'https://api.screenshotone.com/take?' . $queryString . '&signature=' . $signature;
+        } else {
+            $apiUrl = 'https://api.screenshotone.com/take?' . http_build_query($params);
+        }
+
+        $ch = curl_init($apiUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_HTTPHEADER     => ['Accept: image/jpeg, image/*'],
+        ]);
+
+        $imageData  = curl_exec($ch);
+        $statusCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError  = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError !== '' || $statusCode !== 200 || strlen($imageData) < 100) {
+            return '';
+        }
+
+        $filename = $uuid . '.jpg';
+        $destPath = FCPATH . 'media' . DIRECTORY_SEPARATOR . $filename;
+
+        if (file_put_contents($destPath, $imageData) === false) {
+            return '';
+        }
+
+        return $filename;
     }
 }
