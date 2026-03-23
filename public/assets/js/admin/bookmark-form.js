@@ -34,6 +34,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const previewDate        = document.getElementById('preview-date');
     const previewPrivate     = document.getElementById('preview-private');
 
+    function showPreviewImage(src, alt, onError) {
+        previewImageWrap.classList.remove('bookmarks__image-wrap--loaded');
+        previewImage.onerror = onError || null;
+        previewImage.onload  = function () {
+            previewImageWrap.classList.add('bookmarks__image-wrap--loaded');
+            previewImage.onload = null;
+        };
+        previewImage.alt = alt || '';
+        previewImage.src = src;
+        previewImageWrap.classList.remove('d-none');
+    }
+
     // ── Tag badge management ───────────────────────────────────────────────────
     const tagInput      = document.getElementById('field-tag-input');
     const tagsHidden    = document.getElementById('field-tags');
@@ -165,10 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function showOriginalImage() {
         const existingImage = form.dataset.image || '';
         if (existingImage) {
-            previewImage.src = '/media/' + existingImage;
-            previewImage.alt = '';
-            previewImage.onerror = null;
-            previewImageWrap.classList.remove('d-none');
+            showPreviewImage('/media/' + existingImage, '');
         } else {
             previewImageWrap.classList.add('d-none');
             previewImage.src = '';
@@ -178,10 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function updatePreviewImage(url) {
         // If a screenshot was manually captured via the button, always show it.
         if (capturedScreenshotFile) {
-            previewImage.src = '/media/' + capturedScreenshotFile;
-            previewImage.alt = '';
-            previewImage.onerror = function () { previewImageWrap.classList.add('d-none'); };
-            previewImageWrap.classList.remove('d-none');
+            showPreviewImage('/media/' + capturedScreenshotFile, '', function () { previewImageWrap.classList.add('d-none'); });
             return;
         }
 
@@ -199,10 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 clearTimeout(screenshotDebounceTimer);
                 lastScreenshotRequestUrl = null;
                 const thumbUrl = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
-                previewImage.src = thumbUrl;
-                previewImage.alt = '';
-                previewImage.onerror = function () { previewImageWrap.classList.add('d-none'); };
-                previewImageWrap.classList.remove('d-none');
+                showPreviewImage(thumbUrl, '', function () { previewImageWrap.classList.add('d-none'); });
             }
             return;
         }
@@ -235,10 +238,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(function (res) { return res.json(); })
             .then(function (data) {
                 if (data.url) {
-                    previewImage.src = data.url;
-                    previewImage.alt = '';
-                    previewImage.onerror = function () { previewImageWrap.classList.add('d-none'); };
-                    previewImageWrap.classList.remove('d-none');
+                    showPreviewImage(data.url, '', function () { previewImageWrap.classList.add('d-none'); });
                 } else {
                     showOriginalImage();
                 }
