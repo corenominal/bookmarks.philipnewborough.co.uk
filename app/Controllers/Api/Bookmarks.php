@@ -15,6 +15,10 @@ class Bookmarks extends BaseController
      */
     public function create()
     {
+        if ($check = $this->requireAdmin()) {
+            return $check;
+        }
+
         $json = $this->request->getJSON(true);
 
         $validation = $this->validateInput($json);
@@ -86,6 +90,10 @@ class Bookmarks extends BaseController
      */
     public function update($uuid = null)
     {
+        if ($check = $this->requireAdmin()) {
+            return $check;
+        }
+
         if (empty($uuid)) {
             return $this->response->setStatusCode(400)->setJSON([
                 'status'  => 'error',
@@ -167,6 +175,21 @@ class Bookmarks extends BaseController
             'message' => 'Bookmark updated.',
             'uuid'    => $uuid,
         ]);
+    }
+
+    /**
+     * Return a 403 response if the caller is not an admin, or null if allowed.
+     */
+    private function requireAdmin(): ?\CodeIgniter\HTTP\ResponseInterface
+    {
+        if (empty($GLOBALS['is_admin'])) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'status'  => 'error',
+                'message' => 'Forbidden.',
+            ]);
+        }
+
+        return null;
     }
 
     /**
