@@ -95,6 +95,42 @@ class Bookmarks extends BaseController
     }
 
     /**
+     * GET /api/bookmarks/check-url?url={url}
+     * Check whether a URL already exists in the database.
+     */
+    public function checkUrl()
+    {
+        if ($check = $this->requireAdmin()) {
+            return $check;
+        }
+
+        $url = trim($this->request->getGet('url') ?? '');
+
+        if ($url === '') {
+            return $this->response->setStatusCode(400)->setJSON([
+                'status'  => 'error',
+                'message' => 'URL is required.',
+            ]);
+        }
+
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'  => 'error',
+                'message' => 'URL is not valid.',
+            ]);
+        }
+
+        $bookmarkModel = new BookmarkModel();
+        $bookmark      = $bookmarkModel->where('url', $url)->first();
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'exists' => $bookmark !== null,
+            'uuid'   => $bookmark['uuid'] ?? null,
+        ]);
+    }
+
+    /**
      * PUT /api/bookmarks/{uuid}
      * Update an existing bookmark.
      */
