@@ -95,6 +95,56 @@ class Bookmarks extends BaseController
     }
 
     /**
+     * GET /api/bookmarks/latest?limit={limit}&page={page}
+     * Return the latest public bookmarks, newest first.
+     */
+    public function latest()
+    {
+        $limit = (int) ($this->request->getGet('limit') ?? 20);
+        $page  = (int) ($this->request->getGet('page')  ?? 1);
+
+        if ($limit < 1 || $limit > 100) {
+            $limit = 20;
+        }
+
+        if ($page < 1) {
+            $page = 1;
+        }
+
+        $offset = ($page - 1) * $limit;
+
+        $bookmarkModel = new BookmarkModel();
+
+        $total = $bookmarkModel->where('private', 0)->countAllResults(false);
+
+        $bookmarks = $bookmarkModel
+            ->where('private', 0)
+            ->orderBy('created_at', 'DESC')
+            ->findAll($limit, $offset);
+
+        $items = array_map(static function (array $bookmark): array {
+            return [
+                'uuid'       => $bookmark['uuid'],
+                'title'      => $bookmark['title'],
+                'url'        => $bookmark['url'],
+                'favicon'    => $bookmark['favicon'],
+                'notes_html' => $bookmark['notes_html'],
+                'tags'       => $bookmark['tags'],
+                'image'      => $bookmark['image'],
+                'created_at' => $bookmark['created_at'],
+            ];
+        }, $bookmarks);
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'total'  => $total,
+            'page'   => $page,
+            'limit'  => $limit,
+            'items'  => $items,
+        ]);
+    }
+
+    /**
      * GET /api/bookmarks/check-url?url={url}
      * Check whether a URL already exists in the database.
      */

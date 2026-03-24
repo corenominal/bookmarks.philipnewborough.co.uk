@@ -19,6 +19,7 @@ $routes->get('/admin/bookmark/(:segment)/edit', 'Admin\Bookmarks::edit/$1');
 // API routes
 $routes->match(['get', 'options'], '/api/test/ping', 'Api\Test::ping');
 $routes->match(['get', 'options'], '/api/tags', 'Api\Tags::index');
+$routes->match(['get', 'options'], '/api/bookmarks/latest', 'Api\Bookmarks::latest');
 $routes->match(['get', 'options'], '/api/bookmarks/check-url', 'Api\Bookmarks::checkUrl');
 $routes->match(['post', 'options'], '/api/bookmarks', 'Api\Bookmarks::create');
 $routes->match(['put', 'options'], '/api/bookmarks/(:segment)', 'Api\Bookmarks::update/$1');
